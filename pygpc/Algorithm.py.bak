@@ -22,8 +22,7 @@ from .testfunctions import Dummy
 from .Grid import *
 from .MEGPC import *
 from .Classifier import Classifier
-# from .Gradient import get_gradient
-from .Gradient import *
+from .Gradient import get_gradient
 
 
 class Algorithm(object):
@@ -42,7 +41,7 @@ class Algorithm(object):
         ValidationSet object
     """
 
-    def __init__(self, problem, options, grid=None, validation=None, exGrad=None, exGradSolver=None):
+    def __init__(self, problem, options, grid=None, validation=None):
         """
         Constructor; Initializes GPC algorithm
         """
@@ -53,9 +52,6 @@ class Algorithm(object):
         self.grid = grid
         self.grid_gradient = []
         self.qoi_specific = None
-        # added by jxz
-        self.exGrad = exGrad
-        self.exGradSolver = exGradSolver
 
         # Generate results folder if it doesn't exist
         if self.options["fn_results"] is not None:
@@ -88,11 +84,8 @@ class Algorithm(object):
             - "FD_1st": Finite difference approximation of 1st order accuracy using only the available samples [1]
             - "FD_2nd": Finite difference approximation of 2nd order accuracy using only the available samples [1]
             - "FD_1st2nd": Finite difference approximation of 1st and (where possible) 2nd order accuracy
-            - "External" : Get gradient value from external solvers such as analytical solver, adjoint solver etc.(added by jxz)
         options["gradient_calculation_options"] : dict, optional, default: {"dx": 0.01, "distance_weight": -2}
             Options for gradient calculation (details in get_gradient() function in Gradient.py)
-        options["exGrad_options"]: str, optional, default : "TestFunc"
-            Added by jxz. For now there is only one choice for this option.
         options["backend"] : str, optional, default: "python"
             Default computing backend, certain functions can be computed with Multicore-CPU or GPU acceleration
         options["lambda_eps_gradient"] : float, optional, default: 0.95
@@ -158,10 +151,6 @@ class Algorithm(object):
 
         if "gradient_calculation_options" not in self.options.keys():
             self.options["gradient_calculation_options"] = {"dx": 0.001, "distance_weight": -2}
-
-        # Added by jxz
-        if "exGrad_options" not in self.options.keys():
-            self.options["exGrad_options"] = "TestFunc"
 
         if "dx" not in self.options["gradient_calculation_options"]:
             self.options["gradient_calculation_options"]["dx"] = 0.001
@@ -421,7 +410,7 @@ class Static_IO(Algorithm):
         Model output at each grid point for each QOI
     validation: Validation Set class instance, optional
         Validation set containing reference solutions at precomputed grid points
-#################### To Do : to add the Gradenh method in this part
+
     Examples
     --------
     >>> import pygpc
@@ -430,7 +419,7 @@ class Static_IO(Algorithm):
     >>> # run algorithm
     >>> gpc, coeffs = algorithm.run()
     """
-    def __init__(self, parameters, options, results, grid, validation=None, exGrad=None, exGradSolver=None):
+    def __init__(self, parameters, options, results, grid, validation=None):
         """
         Constructor; Initializes static gPC algorithm
         """
@@ -440,7 +429,7 @@ class Static_IO(Algorithm):
         # create dummy problem
         problem = Problem(model, parameters)
 
-        super(Static_IO, self).__init__(problem=problem, options=options, validation=validation, grid=grid, exGrad=exGrad, exGradSolver=exGradSolver)
+        super(Static_IO, self).__init__(problem=problem, options=options, validation=validation, grid=grid)
 
         self.res = results
 
@@ -594,7 +583,7 @@ class Static(Algorithm):
         Grid object to use for static gPC (Random, SparseGrid, TensorGrid)
     validation: Validation Set class instance, optional
         Validation set containing reference solutions at precomputed grid points
-######################### For now only Static is supported 
+
     Notes
     -----
     .. [1] Blatman, G., & Sudret, B. (2011). Adaptive sparse polynomial chaos expansion based on least angle
@@ -609,11 +598,11 @@ class Static(Algorithm):
     >>> gpc, coeffs, results = algorithm.run()
     """
 
-    def __init__(self, problem, options, grid=None, validation=None, gpc=None, exGrad=None, exGradSolver=None):
+    def __init__(self, problem, options, grid=None, validation=None, gpc=None):
         """
         Constructor; Initializes static gPC algorithm
         """
-        super(Static, self).__init__(problem=problem, options=options, validation=validation, grid=grid, exGrad=exGrad, exGradSolver=exGradSolver)
+        super(Static, self).__init__(problem=problem, options=options, validation=validation, grid=grid)
 
         self.qoi_specific = False
         self.gpc = gpc
@@ -778,9 +767,6 @@ class Static(Algorithm):
                                                          results=res,
                                                          com=com,
                                                          method=self.options["gradient_calculation"],
-                                                         exGrad=self.exGrad,
-                                                         exGrad_options=self.options["exGrad_options"],
-                                                         exGradSolver=self.exGradSolver,
                                                          gradient_results_present=None,
                                                          gradient_idx_skip=None,
                                                          i_iter=gpc.order_max,
@@ -789,7 +775,7 @@ class Static(Algorithm):
                                                          dx=self.options["gradient_calculation_options"]["dx"],
                                                          distance_weight=self.options["gradient_calculation_options"]["distance_weight"],
                                                          verbose=self.options["verbose"])
-                # print(grad_res_3D)
+
                 iprint('Gradient evaluation: ' + str(time.time() - start_time) + ' sec',
                        tab=0, verbose=self.options["verbose"])
 
@@ -816,12 +802,7 @@ class Static(Algorithm):
                                           n_cpu=self.options["n_cpu"])
 
             # validate gpc approximation (determine nrmsd or loocv specified in options["error_type"])
-            if self.options["solver"] == 'NumInt': # modify by chenyifu 2021.12.07 begin
-                eps = None
-            else:
-                eps = gpc.validate(coeffs=coeffs, results=res, gradient_results=grad_res_3D)
-            # modify by chenyifu 2021.12.07 end
-            
+            eps = gpc.validate(coeffs=coeffs, results=res, gradient_results=grad_res_3D)
 
             iprint("-> {} {} error = {}".format(self.options["error_norm"],
                                                 self.options["error_type"],
@@ -890,7 +871,7 @@ class Static(Algorithm):
 
         com.close()
 
-        return gpc, coeffs, res, eps
+        return gpc, coeffs, res
 
 
 class MEStatic(Algorithm):

@@ -2,10 +2,9 @@ import numpy as np
 from .misc import ten2mat
 from .misc import mat2ten
 from .misc import get_all_combinations
-from .RandomParameter import *
-from collections import OrderedDict
 
-def get_gradient(model, problem, grid, results, com, exGrad=None,  exGrad_options="TestFunc" , exGradSolver=None, method="FD_fwd",
+
+def get_gradient(model, problem, grid, results, com,  method="FD_fwd",
                  gradient_results_present=None, gradient_idx_skip=None,
                  i_iter=None, i_subiter=None, print_func_time=False,
                  dx=1e-3, distance_weight=-1, verbose=False):
@@ -27,8 +26,6 @@ def get_gradient(model, problem, grid, results, com, exGrad=None,  exGrad_option
         Results of model function in grid points
     com : Computation class instance
         Computation class instance to run the computations
-    exGrad : ndarray of float [n_grid x n_out x dim] (default is None)
-        External gradient value
     method : str, optional, default: "FD_fwd"
         Gradient calculation method:
         - "FD_fwd": Finite difference forward approximation of the gradient using n_grid x dim additional sampling
@@ -37,7 +34,6 @@ def get_gradient(model, problem, grid, results, com, exGrad=None,  exGrad_option
         - "FD_2nd": Finite difference approximation of 2nd order accuracy using only the available samples [1]
         - "FD_1st2nd": Finite difference approximation of 1st and (where possible) 2nd order accuracy
         using only the available samples [1]
-        - "External" : Get gradient value from external solvers such as analytical solver, adjoint solver etc.
     gradient_results_present : ndarray of float [n_grid_old x n_out x dim], optional, default: None
         Gradient of model function in grid points, already determined in previous calculations.
         Those values will not be updated!
@@ -241,39 +237,6 @@ def get_gradient(model, problem, grid, results, com, exGrad=None,  exGrad_option
 
             gradient_results_idx = np.hstack((gradient_idx_skip, coord_idx_1st, coord_idx_2nd)).astype(int)
 
-        #################################################################
-        #           Get gradient value from external solvers            #
-        #################################################################
-        elif method == "External":
-
-            if exGrad_options is "TestFunc":
-                exgrad = External_Grad(exGrad=exGrad,GradSolver=exGradSolver)
-                # Initial
-                ngrid = results.shape[0]
-                dim = problem.dim
-                nout = results.shape[1]
-                p = OrderedDict()
-                for i,key in enumerate(problem.parameters):
-                    if(isinstance(problem.parameters[key],RandomParameter)):
-                        p[key] = grid.coords[:,i]
-                    else:
-                        p[key] = problem.parameters[key]
-
-            elif exGrad_options is "Adjoint":
-                exgrad = External_Grad(exGrad=exGrad)
-
-            # Get gradient
-            gradient_results_new = exgrad.run(p,ngrid,dim,nout)
-
-            gradient_results_idx = np.hstack((gradient_idx_skip, gradient_idx_compute)).astype(int)
-            # check gradient 
-            gradient_results_idx_del = []
-            for i in range(grid.coords.shape[0]):# n_grid
-                if np.any(gradient_results_new[i,:,:] == 0) :
-                    gradient_results_idx_del.append(i)
-            gradient_results_idx = np.delete(gradient_results_idx,gradient_results_idx_del)
-            
-
         else:
             raise NotImplementedError("Please provide a valid gradient estimation method!")
 
@@ -425,37 +388,3 @@ def FD_2nd(coords_norm, coord_idx, results, dx, distance_weight):
         gradient_results[i, :, :] = np.matmul(QtD_inv, rhs).transpose()
 
     return gradient_results
-
-
-class External_Grad:
-
-    """
-    Class for getting gradient value from external solvers
-
-    Parameters
-    ----------
-    exGrad : ndarray of float [n_grid x n_out x dim]
-        Gradient value which has been completely caculated
-    GradSolver : object
-        External gradient solver
-    """
-
-    def __init__(self,exGrad=None,GradSolver=None):
-
-        self.exGrad = exGrad
-        self.GradSolver = GradSolver
-    
-
-    def run(self,p,ngrid,dim,nout=1):
-
-        if self.GradSolver is not None :
-
-            # run the method in class 
-            self.exGrad = self.GradSolver.cal_gradient(p,ngrid,dim,nout)
-            return self.exGrad     
-
-        elif self.GradSolver is None and self.exGrad is not None :
-
-            return self.exGrad
-        else:
-            raise NotImplementedError("Please give a finished external gradient array or a solver!")

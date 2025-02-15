@@ -370,8 +370,6 @@ def get_sensitivities_hdf5(fn_gpc, output_idx=False, calc_sobol=True, calc_globa
         if calc_pdf:
             f.create_dataset(data=pdf_x, name="sens/pdf_x")
             f.create_dataset(data=pdf_y, name="sens/pdf_y")
-    
-    return mean,std
 
 
 def get_extracted_sobol_order(sobol, sobol_idx_bool, order=1):
