@@ -818,7 +818,9 @@ class Static(Algorithm):
             # validate gpc approximation (determine nrmsd or loocv specified in options["error_type"])
             if self.options["solver"] == 'NumInt': # modify by chenyifu 2021.12.07 begin
                 eps = None
-            else:
+            elif self.options["error_type"] is None: # modify by jixinze 2025.2.26
+                eps = None
+            else :
                 eps = gpc.validate(coeffs=coeffs, results=res, gradient_results=grad_res_3D)
             # modify by chenyifu 2021.12.07 end
             
