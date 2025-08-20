@@ -892,7 +892,7 @@ class Static(Algorithm):
 
         com.close()
 
-        return gpc, coeffs, res, eps
+        return gpc, coeffs, res
 
 
 class MEStatic(Algorithm):

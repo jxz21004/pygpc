@@ -116,7 +116,7 @@ class Session(object):
         Runs the gPC session by calling the algorithm and saves the Session object
         in .hdf5 results file in the "session/" folder or as .pkl file
         """
-        gpc, coeffs, results, eps = self.algorithm.run()
+        gpc, coeffs, results = self.algorithm.run()
         self.set_gpc(gpc)
 
         if type(coeffs) is list and not self.qoi_specific:
@@ -138,4 +138,4 @@ class Session(object):
             else:
                 write_session(self, fname=self.fn_session, overwrite=True)
 
-        return self, coeffs, results, eps
+        return self, coeffs, results
