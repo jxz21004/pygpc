@@ -806,14 +806,14 @@ class Static(Algorithm):
 
             # Initialize gpc matrix
             gpc.init_gpc_matrix(gradient_idx=gradient_idx)
-
+            
             # Compute gpc coefficients
             coeffs = gpc.solve(results=res,
                                gradient_results=grad_res_3D,
                                solver=self.options["solver"],
                                settings=self.options["settings"],
                                verbose=self.options["verbose"])
-
+            
             # create validation set if necessary
             if self.options["error_type"] == "nrmsd" and gpc.validation is None:
                 gpc.create_validation_set(n_samples=self.options["n_samples_validation"],
@@ -851,15 +851,16 @@ class Static(Algorithm):
 
         # save gpc object and gpc coeffs
         if self.options["fn_results"] is not None:
-
+            
             with h5py.File(fn_results + ".hdf5", "a") as f:
 
                 f.create_dataset("misc/fn_session",
                                  data=np.array([os.path.split(self.options["fn_session"])[1]]).astype("|S"))
                 f.create_dataset("misc/fn_session_folder",
                                  data=np.array([self.options["fn_session_folder"]]).astype("|S"))
-                f.create_dataset("misc/error_type", data=self.options["error_type"])
-                f.create_dataset("error", data=eps, maxshape=None, dtype="float64")
+                if self.options["error_type"] is not None:
+                	f.create_dataset("misc/error_type", data=self.options["error_type"])
+                	f.create_dataset("error", data=eps, maxshape=None, dtype="float64")
                 f.create_dataset("grid/coords", maxshape=None, data=gpc.grid.coords, dtype="float64")
                 f.create_dataset("grid/coords_norm", maxshape=None, data=gpc.grid.coords_norm, dtype="float64")
 
@@ -869,8 +870,14 @@ class Static(Algorithm):
                     f.create_dataset("grid/coords_gradient_norm", data=gpc.grid.coords_gradient_norm,
                                      maxshape=None, dtype="float64")
 
-                f.create_dataset("coeffs", data=coeffs,
-                                 maxshape=None, dtype="float64")
+                # f.create_dataset("coeffs", data=coeffs,
+                #                  maxshape=None, dtype="float64")
+                if np.iscomplexobj(coeffs):
+                    f.create_dataset("coeffs", data=coeffs.real, maxshape=None, dtype="float64")
+                    f.create_dataset("coeffs_imag", data=coeffs.imag, maxshape=None, dtype="float64")
+                else:
+                    f.create_dataset("coeffs", data=coeffs, maxshape=None, dtype="float64")
+
                 f.create_dataset("gpc_matrix", data=gpc.gpc_matrix,
                                  maxshape=None, dtype="float64")
 
@@ -878,7 +885,12 @@ class Static(Algorithm):
                     f.create_dataset("gpc_matrix_gradient",
                                      data=gpc.gpc_matrix_gradient, maxshape=None, dtype="float64")
 
-                f.create_dataset("model_evaluations/results", data=res, maxshape=None, dtype="float64")
+                # f.create_dataset("model_evaluations/results", data=res, maxshape=None, dtype="float64")
+                if np.iscomplexobj(res):
+                    f.create_dataset("model_evaluations/results", data=res.real, maxshape=None, dtype="float64")
+                    f.create_dataset("model_evaluations/results_imag", data=res.imag, maxshape=None, dtype="float64")
+                else:
+                    f.create_dataset("model_evaluations/results", data=res, maxshape=None, dtype="float64")              
 
                 if grad_res_3D is not None:
                     f.create_dataset("model_evaluations/gradient_results", data=ten2mat(grad_res_3D),
@@ -893,7 +905,7 @@ class Static(Algorithm):
                                      maxshape=None, dtype="float64")
                     f.create_dataset("validation/grid/coords_norm", data=gpc.validation.grid.coords_norm,
                                      maxshape=None, dtype="float64")
-
+        
         com.close()
 
         return gpc, coeffs, res
