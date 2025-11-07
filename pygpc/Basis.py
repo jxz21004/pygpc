@@ -100,7 +100,7 @@ class Basis:
 
         return b_, b_a_, b_a_grad_
 
-    def init_basis_sgpc(self, problem, order, order_max, order_max_norm, interaction_order,
+    def init_basis_sgpc(self, problem, order, order_max, order_max_norm, interaction_order, n_cpu=None,
                         interaction_order_current=None):
         """
         Initializes basis functions for standard gPC.
@@ -128,6 +128,16 @@ class Basis:
             Number of random variables currently interacting with respect to the highest order.
             (interaction_order_current <= interaction_order)
             The parameters for lower orders are all interacting with "interaction order".
+        n_cpu : int
+            Number of CPU cores to use (parallel model evaluations)
+            - n_cpu = 1
+                Use the single-core (sequential) implementation.
+            - n_cpu = 0
+                Use all available CPU cores (maximum parallelization).
+            - n_cpu > 1
+                Use a multiprocessing.Pool with `n_cpu` worker processes.
+            - n_cpu is None
+                Equivalent to n_cpu = 0; use all available CPU cores.
 
         Notes
         -----
@@ -149,6 +159,7 @@ class Basis:
         b: list of BasisFunction object instances [n_basis x n_dim]
             Parameter wise basis function objects used in gPC.
             Multiplying all elements in a row at location xi = (x1, x2, ..., x_dim) yields the global basis function.
+
         """
 
         self.dim = problem.dim
@@ -166,23 +177,29 @@ class Basis:
         # get total number of basis functions
         self.n_basis = self.multi_indices.shape[0]
 
-        # construct 2D list with BasisFunction objects and array with coefficients and
-        # initialize array of basis coefficients
-        workhorse_partial = partial(self.set_basis, problem=problem)
+        if n_cpu is None or n_cpu == 0:
+            n_cpu = multiprocessing.cpu_count()
 
-        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-            out = pool.map(workhorse_partial, range(self.n_basis))
-            self.b = [o[0] for o in out]
-            self.b_array = np.concatenate([o[1] for o in out])
-            self.b_array_grad = np.concatenate([o[2] for o in out])
+        if n_cpu == 1:
+            # This is the single core implementation:
+            self.b = [[0 for _ in range(self.dim)] for _ in range(self.n_basis)]
 
-        # This is the single core implementation:
-        # self.b = [[0 for _ in range(self.dim)] for _ in range(self.n_basis)]
-        
-        # for i_basis in range(self.n_basis):
-        #     for i_dim, p in enumerate(problem.parameters_random):   # OrderedDict of RandomParameter objects
-        #         self.b[i_basis][i_dim] = problem.parameters_random[p].init_basis_function(
-        #             order=self.multi_indices[i_basis, i_dim])
+            for i_basis in range(self.n_basis):
+                for i_dim, p in enumerate(problem.parameters_random):   # OrderedDict of RandomParameter objects
+                    self.b[i_basis][i_dim] = problem.parameters_random[p].init_basis_function(
+                        order=self.multi_indices[i_basis, i_dim])
+        else:
+            # construct 2D list with BasisFunction objects and array with coefficients and
+            # initialize array of basis coefficients
+
+            workhorse_partial = partial(self.set_basis, problem=problem)
+
+            with multiprocessing.Pool(n_cpu) as pool:
+                out = pool.map(workhorse_partial, range(self.n_basis))
+                self.b = [o[0] for o in out]
+                self.b_array = np.concatenate([o[1] for o in out])
+                self.b_array_grad = np.concatenate([o[2] for o in out])
+
 
         # Generate unique IDs of basis functions
         self.b_id = [uuid.uuid4() for _ in range(self.n_basis)]

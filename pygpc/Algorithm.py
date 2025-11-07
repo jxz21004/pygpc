@@ -112,6 +112,10 @@ class Algorithm(object):
             GPC method to apply ['Reg', 'Quad']
         options["n_cpu"] : int, optional, default=1
             Number of threads to use for parallel evaluation of the model function.
+        options["n_cpu_comp"] : int, optional, default=1
+            Number of threads to use for parallel evaluation of the model function.
+        options["n_cpu_basis"] : int, optional, default=0
+            Number of threads to use for basis initialization.
         options["n_samples_validation"] : int, optional, default: 1e4
             Number of validation points used to determine the NRMSD if chosen as "error_type". Does not create a
             validation set if there is already one present in the Problem instance (problem.validation).
@@ -199,6 +203,22 @@ class Algorithm(object):
         else:
             self.options["n_cpu"] = 1
             self.n_cpu = 1
+
+        if "n_cpu_comp" in self.options.keys():
+            self.n_cpu_comp = self.options["n_cpu_comp"]
+        elif "n_cpu" in self.options.keys():
+            self.options["n_cpu_comp"] = self.options["n_cpu"]
+            self.n_cpu_comp = self.options["n_cpu"]
+        else:
+            self.options["n_cpu_comp"] = 1
+            self.n_cpu_comp = 1
+
+        if "n_cpu_basis" in self.options.keys():
+            self.n_cpu_basis = self.options["n_cpu_basis"]
+        else:
+            self.options["n_cpu_basis"] = 0
+            self.n_cpu_basis = 0
+
 
         if "n_samples_validation" not in self.options.keys():
             self.options["n_samples_validation"] = 1e4
@@ -736,7 +756,7 @@ class Static(Algorithm):
         gpc.interaction_order_current = copy.deepcopy(self.options["interaction_order"])
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         eps = self.options["eps"] + 1
         eps_pre = eps + 1
@@ -1057,7 +1077,7 @@ class MEStatic(Algorithm):
             raise ValueError("Grid not provided and specified grid type not known!")
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         megpc = []
         coeffs = []
@@ -1746,7 +1766,7 @@ class StaticProjection(Algorithm):
                                          "seed": self.options["seed"]})
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         # Set up reduced gPC
         self.problem_reduced = []
@@ -2143,7 +2163,7 @@ class MEStaticProjection(Algorithm):
                                       "Please use either 'Random' or 'LHS'.")
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         megpc = []
         coeffs = []
@@ -2546,7 +2566,7 @@ class RegAdaptive(Algorithm):
                                 min(self.options["interaction_order"], self.options["order_start"])])
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         # Initialize Reg gPC object
         print("Initializing gPC object...")
@@ -3042,7 +3062,7 @@ class MERegAdaptiveProjection(Algorithm):
                                       "Please use either 'Random', 'LHS' or 'GP'.")
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         # Run initial simulations to determine initial projection matrix
         iprint("Performing {} initial simulations!".format(grid.coords.shape[0]),
@@ -4200,7 +4220,7 @@ class RegAdaptiveProjection(Algorithm):
                                          "seed": self.options["grid_options"]["seed"]})
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         # Run initial simulations to determine initial projection matrix
         iprint("Performing {} simulations!".format(grid_original.coords.shape[0]),
@@ -4811,6 +4831,7 @@ class RegAdaptiveOldSet(Algorithm):
         if "print_function" not in self.options.keys():
             self.options["print_function"] = print
 
+
     def run(self):
 
         # initialize iterators
@@ -4825,7 +4846,7 @@ class RegAdaptiveOldSet(Algorithm):
                                 min(self.options["interaction_order"], self.options["order_start"])])
 
         # Initialize parallel Computation class
-        com = Computation(n_cpu=self.n_cpu, matlab_model=self.options["matlab_model"])
+        com = Computation(n_cpu=self.n_cpu_comp, matlab_model=self.options["matlab_model"])
 
         # Initialize Reg gPC object
         self.options["print_function"]("Initializing gPC object...")

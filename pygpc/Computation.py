@@ -32,10 +32,10 @@ def Computation(n_cpu, matlab_model=False):
     obj : object instance of Computation class
         Object instance of Computation class
     """
-    if n_cpu == 0:
-        return ComputationFuncPar(n_cpu, matlab_model=matlab_model)
-    else:
+    if n_cpu > 1:
         return ComputationPoolMap(n_cpu, matlab_model=matlab_model)
+    else:
+        return ComputationFuncPar(n_cpu, matlab_model=matlab_model)
 
 
 class ComputationPoolMap:

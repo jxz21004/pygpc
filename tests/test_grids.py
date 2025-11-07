@@ -1059,7 +1059,7 @@ class TestPygpcMethods(unittest.TestCase):
         parameters["x3"] = pygpc.Beta(pdf_shape=[1, 1], pdf_limits=[0, 0.6])
         problem = pygpc.Problem(model, parameters)
 
-        gpc = pygpc.Reg(problem=problem, order_max=2)
+        gpc = pygpc.Reg(problem=problem, options=dict(), order_max=2)
 
         # Random
         print("Testing reproducibility of Random grid ...")

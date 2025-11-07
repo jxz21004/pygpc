@@ -22,7 +22,7 @@ from .misc import get_different_rows_from_matrices
 import multiprocessing.pool
 from _functools import partial
 
-warnings.filterwarnings('ignore')
+# warnings.filterwarnings('ignore')
 
 class Grid(object):
     """

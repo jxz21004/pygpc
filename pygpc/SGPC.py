@@ -97,6 +97,12 @@ class SGPC(GPC):
         if interaction_order is None:
             interaction_order = problem.dim
 
+        if "n_cpu_basis" in options.keys():
+            n_cpu_basis = options["n_cpu_basis"]
+        else:
+            options["n_cpu_basis"] = 0
+            n_cpu_basis = 0
+
         self.order = order
         self.order_max = order_max
         self.order_max_norm = order_max_norm
@@ -108,12 +114,14 @@ class SGPC(GPC):
             self.interaction_order_current = interaction_order_current
 
         self.basis = Basis()
+
         self.basis.init_basis_sgpc(problem=problem,
                                    order=order,
                                    order_max=order_max,
                                    order_max_norm=order_max_norm,
                                    interaction_order=interaction_order,
-                                   interaction_order_current=interaction_order_current)
+                                   interaction_order_current=interaction_order_current,
+                                   n_cpu=n_cpu_basis)
 
     @staticmethod
     def get_mean(coeffs=None, samples=None):
