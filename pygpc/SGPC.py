@@ -188,7 +188,7 @@ class SGPC(GPC):
         return std
 
     # noinspection PyTypeChecker
-    def get_sobol_indices(self, coeffs, algorithm="standard", n_samples=1e4):
+    def get_sobol_indices(self, coeffs, algorithm="standard", n_samples=1e4, normalize_sobol=True):
         """
         Calculate the available sobol indices from the gPC coefficients (standard) or by sampling.
         In case of sampling, the Sobol indices are calculated up to second order.
@@ -206,11 +206,13 @@ class SGPC(GPC):
         n_samples : int, optional, default: 1e4
             Number of samples to determine Sobol indices by sampling. The efficient number of samples
             increases to n_samples * (2*dim + 2) in Saltelli's Sobol sampling sequence.
+        normalize_sobol : bool, optional, default: True
+            normalize Sobol indices w.r.t total variance
 
         Returns
         -------
         sobol: ndarray of float [n_sobol x n_out]
-            Normalized Sobol indices w.r.t. total variance
+            Normalized Sobol indices w.r.t. total variance (unless normalize_sobol is set to False)
         sobol_idx: list of ndarray of int [n_sobol x (n_sobol_included)]
             Parameter combinations in rows of sobol.
         sobol_idx_bool: ndarray of bool [n_sobol x dim]
@@ -289,9 +291,9 @@ class SGPC(GPC):
             for i_sobol in range(sobol_idx_bool.shape[0]):
                 sobol_idx[i_sobol] = np.array([i for i, x in enumerate(sobol_idx_bool[i_sobol, :]) if x])
 
-            var = self.get_std(coeffs=coeffs) ** 2
-
-            sobol = sobol / var
+            if normalize_sobol:
+                var = self.get_std(coeffs=coeffs) ** 2
+                sobol = sobol / var
 
         elif algorithm == "sampling":
 
@@ -328,7 +330,11 @@ class SGPC(GPC):
             sobol = sobol[idx, :]
             sobol_idx = [sobol_idx[i] for i in idx]
             sobol_idx_bool = sobol_idx_bool[idx, :]
-
+            
+            if not normalize_sobol:
+                var = self.get_std(coeffs=coeffs) ** 2
+                sobol = sobol * var
+                
         else:
             raise AssertionError("Please provide valid algorithm argument (""standard"" or ""sampling"")")
 

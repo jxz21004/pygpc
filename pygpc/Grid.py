@@ -1746,7 +1746,7 @@ class LHS(RandomGrid):
             if "method" in self.options.keys():
                 self.method = options["method"]
             else:
-                self.criterion = ["standard"]
+                self.method = "standard"
 
         if type(self.criterion) is not list:
             self.criterion = [self.criterion]

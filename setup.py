@@ -47,7 +47,7 @@ extensions = [
 
 setup(
     name="pygpc",
-    version="0.4.3",
+    version="0.4.4",
     description="A sensitivity and uncertainty analysis toolbox for Python",
     author="Konstantin Weise",
     author_email="kweise@cbs.mpg.de",
